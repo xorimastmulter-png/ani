@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="hy">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Անի — լեզվի ուսուցիչ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Armenian:wght@400;600;800&family=Noto+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2EEFF;--surface:#FFFFFF;--ink:#231942;--muted:#6B6390;--primary:#5E3BEE;--on-primary:#FFFFFF;
+  --skin:#FFC98B;--hair:#3B1F5C;--cheek:#FF8FA3;--mouth:#7A1F3D;--accent:#FFB547;
+  --ok:#1F9D6B;--err:#D93A44;--line:#DDD5FA;--soft:#E9E2FF;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16112B;--surface:#221A40;--ink:#EDE9FF;--muted:#A79FCC;--primary:#8B6CFF;--on-primary:#130B2A;
+    --hair:#0E0720;--line:#352A5E;--soft:#2C2252;--ok:#4CC99A;--err:#FF6B73;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16112B;--surface:#221A40;--ink:#EDE9FF;--muted:#A79FCC;--primary:#8B6CFF;--on-primary:#130B2A;
+  --hair:#0E0720;--line:#352A5E;--soft:#2C2252;--ok:#4CC99A;--err:#FF6B73;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:"Noto Sans Armenian","Noto Sans",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.45}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
+
+.settings{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px 4px}
+.settings select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 8px;font-size:14px;max-width:100%}
+.modes{display:flex;background:var(--soft);border-radius:12px;padding:3px;margin:4px 12px 0}
+.modes button{flex:1;border:0;background:transparent;padding:7px 4px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(35,25,66,.15)}
+
+.stage{display:flex;align-items:center;gap:14px;padding:10px 14px 8px;border-bottom:1px solid var(--line)}
+.avatar{width:112px;height:112px;flex:none}
+.avatar .ring{fill:none;stroke:var(--primary);stroke-width:4;opacity:0;transition:opacity .2s}
+.listening .avatar .ring{opacity:1;animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{50%{stroke-width:9;opacity:.45}}
+.who h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.01em}
+.status{margin:2px 0 0;color:var(--muted);font-size:14px}
+.note{margin:4px 0 0;font-size:12.5px;color:var(--err)}
+
+.chat{flex:1;overflow-y:auto;padding:12px 12px 4px;display:flex;flex-direction:column;gap:10px}
+.empty{margin:auto;text-align:center;color:var(--muted);max-width:30ch;padding:20px 0}
+.empty p{margin:0 0 14px}
+.btn{border:0;background:var(--primary);color:var(--on-primary);border-radius:12px;padding:11px 18px;font-weight:700;cursor:pointer}
+.btn:disabled{opacity:.5;cursor:default}
+.msg{max-width:88%;border-radius:16px;padding:10px 12px;word-wrap:break-word}
+.me{align-self:flex-end;background:var(--primary);color:var(--on-primary);border-bottom-right-radius:5px}
+.ani{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+.reply{font-size:18px;font-weight:600;margin:0}
+.pron{margin:3px 0 0;color:var(--muted);font-size:14px;font-style:italic}
+.tr{margin:6px 0 0;color:var(--muted);font-size:14.5px}
+.fix{margin:8px 0 0;padding:7px 9px;border-left:3px solid var(--err);background:var(--soft);border-radius:6px;font-size:14.5px}
+.words{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.words span{background:var(--soft);border-radius:8px;padding:3px 8px;font-size:13.5px}
+.words b{font-weight:700}
+.play{margin-top:6px;border:1px solid var(--line);background:transparent;border-radius:9px;padding:4px 10px;font-size:13px;cursor:pointer;color:var(--muted)}
+.typing{color:var(--muted);font-style:italic}
+.error{align-self:center;color:var(--err);font-size:14px;text-align:center}
+
+.bar{padding-bottom:max(12px,env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center;padding:8px 12px 12px;border-top:1px solid var(--line);background:var(--bg)}
+.bar input{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+.round{flex:none;width:46px;height:46px;border-radius:50%;border:0;cursor:pointer;display:grid;place-items:center;font-size:19px}
+.mic{background:var(--soft)}
+.listening .mic{background:var(--err);color:#fff}
+.send{background:var(--primary);color:var(--on-primary)}
+.miclang{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:5px 7px;font-size:12px;font-weight:700;cursor:pointer}
+.round:disabled{opacity:.4;cursor:default}
+@media (prefers-reduced-motion:reduce){.listening .avatar .ring{animation:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="settings">
+    <select id="target" aria-label="Լեզու, որը սովորում ես"></select>
+    <select id="level" aria-label="Մակարդակ">
+      <option value="A1">Սկսնակ (A1)</option>
+      <option value="A2">Հիմնական (A2)</option>
+      <option value="B1">Միջին (B1)</option>
+      <option value="B2">Բարձր (B2)</option>
+      <option value="C1">Ազատ (C1)</option>
+    </select>
+    <select id="explain" aria-label="Բացատրությունների լեզու">
+      <option value="Armenian">Բացատրել՝ հայերեն</option>
+      <option value="Russian">Объяснять по-русски</option>
+      <option value="English">Explain in English</option>
+    </select>
+  </div>
+  <div class="modes" role="group" aria-label="Ռեժիմ">
+    <button data-mode="chat" aria-pressed="true">Զրույց</button>
+    <button data-mode="lesson" aria-pressed="false">Դաս</button>
+    <button data-mode="translate" aria-pressed="false">Թարգմանիչ</button>
+  </div>
+
+  <div class="stage">
+    <svg class="avatar" viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="ring" cx="100" cy="104" r="94"/>
+      <circle cx="100" cy="96" r="72" fill="var(--hair)"/>
+      <rect x="40" y="100" width="120" height="70" rx="30" fill="var(--hair)"/>
+      <ellipse cx="100" cy="112" rx="56" ry="60" fill="var(--skin)"/>
+      <path d="M44 104 C40 52 80 30 108 34 C148 38 166 70 158 104 C142 82 124 70 100 72 C78 74 60 86 44 104Z" fill="var(--hair)"/>
+      <circle cx="46" cy="128" r="5" fill="var(--accent)"/>
+      <circle cx="154" cy="128" r="5" fill="var(--accent)"/>
+      <ellipse id="eyeL" cx="79" cy="110" rx="6.5" ry="8.5" fill="#231942"/>
+      <ellipse id="eyeR" cx="121" cy="110" rx="6.5" ry="8.5" fill="#231942"/>
+      <circle cx="81" cy="107" r="2" fill="#fff"/>
+      <circle cx="123" cy="107" r="2" fill="#fff"/>
+      <circle cx="68" cy="132" r="9" fill="var(--cheek)" opacity=".45"/>
+      <circle cx="132" cy="132" r="9" fill="var(--cheek)" opacity=".45"/>
+      <ellipse id="mouth" cx="100" cy="146" rx="13" ry="2" fill="var(--mouth)"/>
+    </svg>
+    <div class="who">
+      <h1>Անի</h1>
+      <p class="status" id="status">Քո լեզվի ուսուցիչը</p>
+      <p class="note" id="note" hidden></p>
+    </div>
+  </div>
+
+  <div class="chat" id="chat" aria-live="polite"></div>
+
+  <div class="bar">
+    <button class="round mic" id="mic" aria-label="Խոսել միկրոֆոնով">🎤</button>
+    <button class="miclang" id="miclang" title="Ո՞ր լեզվով ես խոսում միկրոֆոնով"></button>
+    <input id="input" placeholder="Գրիր կամ սեղմիր 🎤" autocomplete="off" enterkeyhint="send">
+    <button class="round send" id="send" aria-label="Ուղարկել">➤</button>
+  </div>
+</div>
+
+<script>
+const LANGS=[
+  ["en-US","Անգլերեն","English"],["ru-RU","Ռուսերեն","Russian"],["de-DE","Գերմաներեն","German"],
+  ["fr-FR","Ֆրանսերեն","French"],["es-ES","Իսպաներեն","Spanish"],["it-IT","Իտալերեն","Italian"],
+  ["pt-BR","Պորտուգալերեն","Portuguese"],["tr-TR","Թուրքերեն","Turkish"],["ka-GE","Վրացերեն","Georgian"],
+  ["fa-IR","Պարսկերեն","Persian"],["ar-SA","Արաբերեն","Arabic"],["zh-CN","Չինարեն","Chinese (Mandarin)"],
+  ["ja-JP","Ճապոներեն","Japanese"],["ko-KR","Կորեերեն","Korean"],["hy-AM","Հայերեն","Armenian"]
+];
+const $=id=>document.getElementById(id);
+const app=$("app"),chat=$("chat"),input=$("input"),statusEl=$("status"),noteEl=$("note");
+const state={target:"en-US",level:"A1",explain:"Armenian",mode:"chat",micTarget:true,history:[],busy:false};
+try{Object.assign(state,JSON.parse(localStorage.getItem("ani-settings")||"{}"));}catch(e){}
+state.history=[];state.busy=false;
+function save(){try{localStorage.setItem("ani-settings",JSON.stringify({target:state.target,level:state.level,explain:state.explain,mode:state.mode,micTarget:state.micTarget}));}catch(e){}}
+
+LANGS.forEach(([c,hy])=>{const o=document.createElement("option");o.value=c;o.textContent="Սովորում եմ՝ "+hy;$("target").appendChild(o);});
+$("target").value=state.target;$("level").value=state.level;$("explain").value=state.explain;
+const lang=()=>LANGS.find(l=>l[0]===state.target)||LANGS[0];
+
+/* ---------- AI ---------- */
+let sample=null,sampleChecked=false;
+if(window.claude&&typeof claude.use==="function"){
+  claude.use("sample").then(s=>{sample=s;sampleChecked=true;renderEmpty();}).catch(()=>{sampleChecked=true;renderEmpty();});
+}else{sampleChecked=true;}
+
+function buildPrompt(userText,isStart){
+  const [code,,L]=lang();const E=state.explain;
+  const modes={
+    chat:`Free conversation practice. Chat naturally about everyday topics, adapting to the learner. End each reply with a simple question to keep them talking.`,
+    lesson:`Structured mini-lesson. Pick a practical topic suited to the level (greetings, numbers, food, directions, shopping, travel...). Teach ONE small step at a time: introduce a phrase, then ask the learner to repeat it or answer a question using it. Praise briefly, correct gently, then move to the next step.`,
+    translate:`Translator. Translate the learner's message naturally into ${L}. "reply" must contain ONLY the translation. "translation" is a back-translation into ${E}. "correction" may hold a short note in ${E} about nuance or a more natural alternative, else "". Do not ask questions.`
+  };
+  const hist=state.history.slice(-14).map(h=>(h.role==="user"?"Learner: ":"Ani: ")+h.text).join("\n")||"(none)";
+  const msg=isStart?`(The learner just opened the app. Greet them warmly in ${L} and begin.)`:userText;
+  return `You are Ani, a warm, patient language tutor shown as a talking cartoon avatar. Your replies are spoken aloud by text-to-speech.
+Target language: ${L} (${code}). Learner level (CEFR): ${state.level}. Language for explanations: ${E}.
+Mode: ${modes[state.mode]}
+
+Conversation so far:
+${hist}
+
+Learner's new message: ${msg}
+
+Respond ONLY with a JSON object, no markdown:
+{"reply":"...","pron":"...","translation":"...","correction":"...","words":[{"w":"...","m":"..."}]}
+Rules:
+- reply: in ${L} only, 1-3 short sentences, vocabulary matched to level ${state.level}. Plain text, no emoji (it is read aloud).
+- pron: if ${L} uses a non-Latin script, a Latin romanization of reply; otherwise "".
+- translation: reply translated into ${E}.
+- correction: if the learner wrote in ${L} with mistakes, give the corrected sentence plus a one-line explanation in ${E}. If they wrote in another language, show how to say it in ${L}. Otherwise "".
+- words: 0-3 useful words from reply, w = word in ${L}, m = meaning in ${E}.`;
+}
+
+let backend=null;
+function getKey(){try{return localStorage.getItem("ani-gemini-key")||"";}catch(e){return "";}}
+function setKey(k){try{localStorage.setItem("ani-gemini-key",k);}catch(e){}}
+function parseJSON(t){t=String(t||"").replace(/```json|```/g,"").trim();const a=t.indexOf("{"),b=t.lastIndexOf("}");return JSON.parse(a>=0?t.slice(a,b+1):t);}
+async function askAI(prompt){
+  if(sample)return await sample.json(prompt,{modelTier:"quick",cache:false});
+  if(backend!==false){
+    let r=null;
+    try{r=await fetch("/.netlify/functions/ani",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});}catch(e){backend=false;}
+    if(r){
+      const ct=r.headers.get("content-type")||"";
+      if(r.status===404||!ct.includes("json")){backend=false;}
+      else{const d=await r.json();if(!r.ok){if(d.error==="no_key")backend=false;else throw{code:"api",message:d.error};}else{backend=true;return parseJSON(d.text);}}
+    }
+  }
+  const key=getKey();if(!key)throw{code:"need_key"};
+  const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",{method:"POST",
+    headers:{"Content-Type":"application/json","x-goog-api-key":key},
+    body:JSON.stringify({contents:[{role:"user",parts:[{text:prompt}]}],generationConfig:{responseMimeType:"application/json",temperature:0.7}})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){if(r.status===400||r.status===403)throw{code:"bad_key"};if(r.status===429)throw{code:"rate_limited"};throw{code:"api"};}
+  return parseJSON((d.candidates&&d.candidates[0]&&d.candidates[0].content.parts||[]).map(x=>x.text||"").join(""));
+}
+function showKeyBox(msg){
+  if(chat.querySelector(".keybox"))return;
+  const b=el("div","msg ani keybox");
+  b.appendChild(el("p",null,msg));
+  const a=el("a",null,"Ստանալ անվճար բանալի (Google AI Studio)");a.href="https://aistudio.google.com/apikey";a.target="_blank";a.rel="noopener";a.style.color="var(--primary)";
+  b.appendChild(a);
+  const i=el("input");i.placeholder="Տեղադրիր API key-ը";i.style.cssText="display:block;width:100%;margin:8px 0;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg)";
+  const s=el("button","btn","Պահպանել");s.onclick=()=>{if(i.value.trim()){setKey(i.value.trim());b.remove();chat.appendChild(el("div","error","Բանալին պահպանված է։ Հիմա սեղմիր «Սկսել» կամ գրիր։"));}};
+  b.appendChild(i);b.appendChild(s);chat.appendChild(b);scrollDown();
+}
+async function send(text,isStart){
+  text=(text||"").trim();
+  if(state.busy||(!text&&!isStart))return;
+  if(!sample&&!sampleChecked){showError("AI-ն դեռ բեռնվում է, փորձիր մի պահից։");return;}
+  stopSpeaking();
+  if(!isStart){state.history.push({role:"user",text});addUser(text);}
+  input.value="";
+  clearEmpty();
+  state.busy=true;setStatus("Մտածում եմ…");toggleInputs();
+  const typing=document.createElement("div");typing.className="msg ani typing";typing.textContent="…";chat.appendChild(typing);scrollDown();
+  try{
+    const r=await askAI(buildPrompt(text,isStart));
+    typing.remove();
+    const reply=String(r&&r.reply||"").trim();
+    if(!reply)throw{code:"empty"};
+    state.history.push({role:"ani",text:reply});
+    addAni(r);speak(reply);
+  }catch(e){
+    typing.remove();
+    const c=e&&e.code;
+    if(c==="need_key"){showKeyBox("Անին խոսելու համար պետք է Google Gemini-ի անվճար բանալի (API key)։ Մեկ անգամ ես տեղադրում, և այն պահվում է միայն քո բրաուզերում։");setStatus("Քո լեզվի ուսուցիչը");return;}
+    if(c==="bad_key"){setKey("");showKeyBox("Բանալին չաշխատեց։ Ստուգիր և նորից տեղադրիր։");setStatus("Քո լեզվի ուսուցիչը");return;}
+    showError(c==="not_granted"?"Թույլտվություն չտրվեց։ Թույլատրիր AI-ի օգտագործումը, որ Անին պատասխանի։":
+      c==="rate_limited"?"Շատ հարցումներ միանգամից։ Սպասիր մի քանի վայրկյան ու նորից փորձիր։":
+      "Պատասխանը չստացվեց։ Նորից ուղարկիր։");
+    setStatus("Քո լեզվի ուսուցիչը");
+  }finally{state.busy=false;toggleInputs();}
+}
+
+/* ---------- chat UI ---------- */
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e;}
+function addUser(t){chat.appendChild(el("div","msg me",t));scrollDown();}
+function addAni(r){
+  const b=el("div","msg ani");
+  b.appendChild(el("p","reply",r.reply));
+  if(r.pron)b.appendChild(el("p","pron",r.pron));
+  if(r.translation)b.appendChild(el("p","tr",r.translation));
+  if(r.correction)b.appendChild(el("div","fix","✏️ "+r.correction));
+  if(Array.isArray(r.words)&&r.words.length){
+    const w=el("div","words");
+    r.words.slice(0,3).forEach(x=>{if(!x||!x.w)return;const s=el("span");s.appendChild(el("b",null,x.w));s.appendChild(document.createTextNode(" — "+(x.m||"")));w.appendChild(s);});
+    b.appendChild(w);
+  }
+  const p=el("button","play","🔊 Լսել նորից");p.onclick=()=>speak(r.reply);b.appendChild(p);
+  chat.appendChild(b);scrollDown();
+}
+function showError(t){chat.appendChild(el("div","error",t));scrollDown();}
+function scrollDown(){chat.scrollTop=chat.scrollHeight;}
+function clearEmpty(){const e=chat.querySelector(".empty");if(e)e.remove();}
+function renderEmpty(){
+  if(state.history.length||chat.querySelector(".msg"))return;
+  chat.innerHTML="";
+  const box=el("div","empty");
+  const [,hy]=lang();
+  if(state.mode==="translate"){
+    box.appendChild(el("p",null,"Գրիր կամ ասա ինչ-որ բան ցանկացած լեզվով, ես կթարգմանեմ "+hy.toLowerCase()+" ու կարտասանեմ։"));
+  }else{
+    box.appendChild(el("p",null,state.mode==="lesson"?"Կսկսենք քայլ առ քայլ դաս "+hy.toLowerCase()+"ով։":"Եկ զրուցենք "+hy.toLowerCase()+"ով։ Ես կուղղեմ սխալներդ ու կթարգմանեմ։"));
+    const b=el("button","btn","Սկսել");b.onclick=()=>send("",true);
+    box.appendChild(b);
+  }
+  chat.appendChild(box);
+}
+function setStatus(t){statusEl.textContent=t;}
+function toggleInputs(){$("send").disabled=state.busy;}
+function resetChat(){stopSpeaking();state.history=[];chat.innerHTML="";renderEmpty();setStatus("Քո լեզվի ուսուցիչը");checkVoice();updateMicLang();}
+
+/* ---------- settings ---------- */
+$("target").onchange=e=>{state.target=e.target.value;save();resetChat();};
+$("level").onchange=e=>{state.level=e.target.value;save();};
+$("explain").onchange=e=>{state.explain=e.target.value;save();};
+document.querySelectorAll(".modes button").forEach(b=>{
+  b.setAttribute("aria-pressed",b.dataset.mode===state.mode);
+  b.onclick=()=>{state.mode=b.dataset.mode;document.querySelectorAll(".modes button").forEach(x=>x.setAttribute("aria-pressed",x===b));save();resetChat();};
+});
+$("send").onclick=()=>send(input.value);
+input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();send(input.value);}});
+
+/* ---------- avatar animation ---------- */
+const mouth=$("mouth"),eyeL=$("eyeL"),eyeR=$("eyeR");
+let talking=false,kick=0,cur=2;
+function loop(ts){
+  const target=talking?3+Math.abs(Math.sin(ts/85))*4.5+Math.abs(Math.sin(ts/37))*2+kick*4:2;
+  kick*=0.88;cur+=(target-cur)*0.35;
+  mouth.setAttribute("ry",cur.toFixed(2));
+  mouth.setAttribute("rx",(13-(cur-2)*0.35).toFixed(2));
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+(function blink(){
+  setTimeout(()=>{eyeL.setAttribute("ry","1");eyeR.setAttribute("ry","1");
+    setTimeout(()=>{eyeL.setAttribute("ry","8.5");eyeR.setAttribute("ry","8.5");blink();},130);},2500+Math.random()*3000);
+})();
+
+/* ---------- speech out ---------- */
+const synth=window.speechSynthesis;let voices=[],fakeTimer=null;
+function loadVoices(){if(!synth)return;voices=synth.getVoices();checkVoice();}
+if(synth){loadVoices();synth.onvoiceschanged=loadVoices;}
+function pickVoice(){
+  const code=state.target.toLowerCase(),base=code.split("-")[0];
+  return voices.find(v=>v.lang.toLowerCase().replace("_","-")===code)||voices.find(v=>v.lang.toLowerCase().startsWith(base));
+}
+function checkVoice(){
+  if(!synth){showNote("Այս բրաուզերը ձայն չունի։ Բաց հղումը Chrome-ում կամ Safari-ում։");return;}
+  if(voices.length&&!pickVoice()){noteEl.hidden=false;noteEl.textContent="Այս սարքում "+lang()[1].toLowerCase()+" ձայն չկա, կարող է չհնչի։";}
+  else noteEl.hidden=true;
+}
+let unlocked=false;
+function unlockTTS(){
+  if(!synth||unlocked)return;unlocked=true;
+  try{const u=new SpeechSynthesisUtterance(" ");u.volume=0;u.lang=state.target;synth.speak(u);synth.resume();}catch(e){}
+  if(!voices.length)voices=synth.getVoices();
+}
+document.addEventListener("pointerdown",unlockTTS,{capture:true});
+document.addEventListener("keydown",unlockTTS,{capture:true});
+function showNote(t){noteEl.hidden=false;noteEl.textContent=t;}
+function stopSpeaking(){if(synth)synth.cancel();clearTimeout(fakeTimer);talking=false;}
+function speak(text){
+  stopSpeaking();
+  const done=()=>{talking=false;if(!state.busy)setStatus("Քո հերթն է");};
+  if(!synth){talking=true;setStatus("Խոսում եմ…");fakeTimer=setTimeout(done,Math.min(9000,text.length*70));return;}
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang=state.target;const v=pickVoice();if(v)u.voice=v;
+  u.rate=state.level==="A1"?0.82:state.level==="A2"?0.9:1;
+  u.onstart=()=>{talking=true;setStatus("Խոսում եմ…");};
+  u.onboundary=()=>{kick=1;};
+  u.onend=done;
+  u.onerror=e=>{done();if(e.error!=="interrupted"&&e.error!=="canceled")showNote("Ձայնը չաշխատեց ("+e.error+")։ Բաց հղումը Chrome-ում կամ Safari-ում։");};
+  synth.speak(u);synth.resume();
+  setTimeout(()=>{if(!synth.speaking&&!talking){
+    showNote(voices.length?"Ձայնը չմիացավ։ Սեղմիր «🔊 Լսել նորից»։":"Այս բրաուզերում ձայներ չկան։ Բաց հղումը Chrome-ում կամ Safari-ում։");
+    setStatus("Քո հերթն է");}},1500);
+}
+
+/* ---------- speech in ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null;
+function updateMicLang(){
+  $("miclang").textContent=state.micTarget?state.target.split("-")[0].toUpperCase():"ՀԱՅ";
+  $("miclang").setAttribute("aria-label","Միկրոֆոնի լեզու՝ "+(state.micTarget?lang()[1]:"Հայերեն"));
+}
+$("miclang").onclick=()=>{state.micTarget=!state.micTarget;save();updateMicLang();};
+updateMicLang();
+if(!SR){$("mic").disabled=true;$("mic").title="Այս բրաուզերում ձայնի ճանաչում չկա, գրիր տեքստով";$("miclang").hidden=true;}
+$("mic").onclick=()=>{
+  if(!SR)return;
+  if(rec){rec.stop();return;}
+  stopSpeaking();
+  rec=new SR();rec.lang=state.micTarget?state.target:"hy-AM";rec.interimResults=true;rec.continuous=false;
+  let finalText="";
+  rec.onstart=()=>{app.classList.add("listening");setStatus("Լսում եմ…");};
+  rec.onresult=e=>{let t="";for(const r of e.results){t+=r[0].transcript;if(r.isFinal)finalText=t;}input.value=t;};
+  rec.onerror=e=>{if(e.error==="not-allowed")showError("Միկրոֆոնի թույլտվություն չկա։ Գրիր տեքստով։");};
+  rec.onend=()=>{app.classList.remove("listening");rec=null;setStatus("Քո լեզվի ուսուցիչը");const t=(finalText||input.value).trim();if(t)send(t);};
+  try{rec.start();}catch(e){rec=null;}
+};
+
+renderEmpty();checkVoice();
+</script>
+</body>
+</html>
